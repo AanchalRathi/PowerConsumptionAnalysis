@@ -1,26 +1,15 @@
-# Import necessary modules from Flask
 from flask import Flask, render_template, request
 
-# Import numpy and pandas for data handling
 import numpy as np
 import pandas as pd
-
-# Import the pickle library for model loading
 import pickle
-
-# --- START: MODEL INTEGRATION ---
-# This block MUST be at the top level (global scope) of your app.py file.
-
-# Define the path to your saved model file
-# IMPORTANT: Ensure 'PCA_model.pkl' is in the same directory as app.py.
 MODEL_PATH = 'PCA_model.pkl'
 
-# Initialize the model variable globally.
 model = None
 
 try:
-    # Attempt to load your actual trained model using pickle
-    with open(MODEL_PATH, 'rb') as file: # 'rb' for read binary mode
+   
+    with open(MODEL_PATH, 'rb') as file: 
         model = pickle.load(file)
     print(f"SERVER STARTUP: Model loaded successfully from {MODEL_PATH}")
 except FileNotFoundError:
@@ -38,14 +27,8 @@ except Exception as e:
             return f"Model Loading Failed: {e}"
     model = FallbackDummyModel()
 
-# --- END: MODEL INTEGRATION ---
-
-
-# Initialize the Flask application
-# This line MUST come after model loading and before any @app.route decorators.
 app = Flask(__name__)
 
-# Define the home route
 @app.route('/')
 def home():
     """
@@ -53,7 +36,6 @@ def home():
     """
     return render_template("pca.html")
 
-# Define the predict route
 @app.route('/predict', methods=["POST", "GET"])
 def predict():
     """
@@ -61,11 +43,10 @@ def predict():
     """
     if request.method == "POST":
         try:
-            # --- START DETAILED INPUT DEBUGGING ---
+           
             print("\n--- PREDICTION REQUEST DEBUGGING ---")
             print(f"Raw request.form content: {request.form}")
 
-            # Define the expected feature names from the HTML form.
             expected_form_fields = [
                 'Global_reactive_power',
                 'Global_intensity',
@@ -110,14 +91,11 @@ def predict():
             numeric_inputs['sub_metering_4'] = sub_metering_4_calculated
             print(f"Calculated sub_metering_4: {sub_metering_4_calculated}")
             print(f"All features (including calculated): {numeric_inputs}")
-            # --- END DETAILED INPUT DEBUGGING ---
-
-            # Check if the model was successfully loaded at startup
+            
             if model is None:
                 raise RuntimeError("The machine learning model is not available. Please check server logs for loading errors during startup.")
 
             # Define the final feature names and their order for the DataFrame.
-            # CRITICAL FIX: This order MUST EXACTLY match the input features (X)
             # that your model was trained on, based on the list you provided,
             # and including 'sub_metering_4' which was previously missing.
             # Assuming 'Global_active_power' is the target and not an input feature for prediction.
@@ -128,20 +106,15 @@ def predict():
                 'Sub_metering_1',
                 'Sub_metering_2',
                 'Sub_metering_3',
-                'sub_metering_4'  # This was explicitly mentioned as missing in a previous error
+                'sub_metering_4' 
             ]
 
-
-            # Create a list of values in the correct order for the DataFrame
             ordered_input_values = [numeric_inputs[name] for name in features_name_for_df]
-
-            # Create a pandas DataFrame
             df = pd.DataFrame([np.array(ordered_input_values)], columns=features_name_for_df)
             print(f"DataFrame prepared for model prediction: \n{df}")
-            print(f"DataFrame dtypes: \n{df.dtypes}") # Print data types of DataFrame columns
+            print(f"DataFrame dtypes: \n{df.dtypes}") 
 
-            # --- START DEBUGGING MODEL PREDICTION ---
-            output = "Prediction Error" # Default in case prediction fails
+            output = "Prediction Error" 
             try:
                 print(f"Attempting prediction with model of type: {type(model)}")
                 output = model.predict(df)
@@ -149,7 +122,6 @@ def predict():
             except Exception as model_err:
                 print(f"ERROR: An error occurred during model.predict(df): {model_err}")
                 raise ValueError(f"Model prediction failed: {model_err}")
-            # --- END DEBUGGING MODEL PREDICTION ---
 
             prediction_display_text = str(output)
             return render_template('result1.html', prediction_text=prediction_display_text)
